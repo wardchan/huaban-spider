@@ -70,7 +70,7 @@ async function crawlPin(board, max) {
   for (let index in pinArr) {
     total ++;
     const pin = pinArr[index];
-    const fileName = `${pin.raw_text.replace(/\//g, '-') || pin.pin_id}.${fileExtNameMap[pin.file.type]}`;
+    const fileName = `${pin.raw_text.replace(/\//g, '-').replace(/[|&;$%@"<>()+,]/g, '') || pin.pin_id}.${fileExtNameMap[pin.file.type]}`;
     const targetFilePath = path.join(basePath, board.title, fileName);
     queue.add(() => download(pin, targetFilePath)).then(() => {
       const msg = `Download success for ${fileName}, queue-size=${queue.size}, pending-size=${queue.pending}, total=${total}`;
