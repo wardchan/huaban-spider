@@ -33,6 +33,8 @@ const bucketURLMap = {
 const fileExtNameMap = {
   'image/gif': 'gif',
   'image/jpeg': 'jpg',
+  'image/pjpeg': 'jpg',
+  'image': 'jpg',
   'image/jpg': 'jpg',
   'image/png': 'png',
 };
@@ -70,10 +72,10 @@ async function crawlPin(board, max) {
   for (let index in pinArr) {
     total ++;
     const pin = pinArr[index];
-    const fileName = `${pin.raw_text.replace(/\//g, '-').replace(/[|&;$%@"<>()+,]/g, '') || pin.pin_id}.${fileExtNameMap[pin.file.type]}`;
-    const targetFilePath = path.join(basePath, board.title, fileName);
+    const fileName = `${pin.pin_id}.${fileExtNameMap[pin.file.type.split(';')[0]]}`;
+    const targetFilePath = path.join(basePath, 'huaban', board.title, fileName);
     queue.add(() => download(pin, targetFilePath)).then(() => {
-      const msg = `Download success for ${fileName}, queue-size=${queue.size}, pending-size=${queue.pending}, total=${total}`;
+      const msg = `Download success for ${fileName}, fileType=${pin.file.type}, queue-size=${queue.size}, pending-size=${queue.pending}, total=${total}`;
       console.log(msg);
     });
   }
