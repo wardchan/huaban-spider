@@ -3,10 +3,13 @@ const path = require('path');
 const fse = require('fs-extra');
 const charset = require('superagent-charset');
 const PQueue = require('p-queue');
+const config = require('./config');
 
 charset(request);
 
-const queue = new PQueue({ concurrency: 5 });
+const queue = new PQueue({
+  concurrency: config.concurrency || 5,
+});
 queue.onEmpty().then(() => {
   console.log('Queue is empty.');
 });
@@ -14,10 +17,10 @@ queue.onIdle().then(() => {
   console.log('Queue is idle.');
 });
 
-const basePath = __dirname;
+const defaultOutputPath = path.join(__dirname, 'huaban');
 
 const cookie = {
-  'Cookie': 'your cookie',
+  'Cookie': config.cookie,
   'Accept': 'application/json',
   'X-Request': 'JSON',
   'X-Requested-With': 'XMLHttpRequest',
@@ -46,7 +49,7 @@ async function sleep(ms) {
 };
 
 async function crawlBoard(max) {
-  const url = `http://login.meiwu.co/p8nhxkthfw/?limit=50&wfl=1${max ? 'max=' + max : ''}`
+  const url = `http://login.meiwu.co/${config.profileID}/?limit=50&wfl=1${max ? 'max=' + max : ''}`
   const resp = await request.get(url).set(cookie);
   const respJSON = JSON.parse(resp.text);
   const boardArr = respJSON.user.boards;
@@ -73,7 +76,7 @@ async function crawlPin(board, max) {
     total ++;
     const pin = pinArr[index];
     const fileName = `${pin.pin_id}.${fileExtNameMap[pin.file.type.split(';')[0]]}`;
-    const targetFilePath = path.join(basePath, 'huaban', board.title, fileName);
+    const targetFilePath = path.join(config.outputPath || defaultOutputPath, board.title, fileName);
     queue.add(() => download(pin, targetFilePath)).then(() => {
       const msg = `Download success for ${fileName}, fileType=${pin.file.type}, queue-size=${queue.size}, pending-size=${queue.pending}, total=${total}`;
       console.log(msg);
