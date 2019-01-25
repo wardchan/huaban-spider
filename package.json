@@ -12,7 +12,9 @@
   "license": "MIT",
   "dependencies": {
     "fs-extra": "^7.0.1",
+    "node.extend": "^2.0.2",
     "p-queue": "^3.0.0",
+    "sanitize-filename": "^1.6.1",
     "superagent": "^3.8.3",
     "superagent-charset": "^1.2.0"
   },

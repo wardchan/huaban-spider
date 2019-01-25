@@ -3,12 +3,23 @@ const path = require('path');
 const fse = require('fs-extra');
 const charset = require('superagent-charset');
 const PQueue = require('p-queue');
-const config = require('./config');
+const sanitize = require('sanitize-filename');
+const extend = require('node.extend');
+const customConfig = require('./config');
 
 charset(request);
 
+const config = {
+  cookie: '',
+  outputPath: path.join(__dirname, 'huaban'),
+  profileID: '',
+  concurrency: 5,
+  appendDescToFileName: false,
+};
+extend(config, customConfig);
+
 const queue = new PQueue({
-  concurrency: config.concurrency || 5,
+  concurrency: config.concurrency,
 });
 queue.onEmpty().then(() => {
   console.log('Queue is empty.');
@@ -17,9 +28,7 @@ queue.onIdle().then(() => {
   console.log('Queue is idle.');
 });
 
-const defaultOutputPath = path.join(__dirname, 'huaban');
-
-const cookie = {
+const requestHeader = {
   'Cookie': config.cookie,
   'Accept': 'application/json',
   'X-Request': 'JSON',
@@ -50,7 +59,7 @@ async function sleep(ms) {
 
 async function crawlBoard(max) {
   const url = `http://login.meiwu.co/${config.profileID}/?limit=50&wfl=1${max ? 'max=' + max : ''}`
-  const resp = await request.get(url).set(cookie);
+  const resp = await request.get(url).set(requestHeader);
   const respJSON = JSON.parse(resp.text);
   const boardArr = respJSON.user.boards;
 
@@ -65,18 +74,20 @@ async function crawlBoard(max) {
 };
 
 async function crawlPin(board, max) {
-  console.log(`Crawling pin for board ${board.title}, max=${max || ''}`);
-
   const url = `http://login.meiwu.co/boards/${board.board_id}/?limit=20&wfl=1${max ? '&max=' + max : ''}`;
-  const resp = await request.get(url).set(cookie);
+
+  console.log(`Crawling pin for board ${board.title}, URL=${url}`);
+
+  const resp = await request.get(url).set(requestHeader);
   const respJSON = JSON.parse(resp.text);
   const pinArr = respJSON.board.pins;
 
   for (let index in pinArr) {
     total ++;
     const pin = pinArr[index];
-    const fileName = `${pin.pin_id}.${fileExtNameMap[pin.file.type.split(';')[0]]}`;
-    const targetFilePath = path.join(config.outputPath || defaultOutputPath, board.title, fileName);
+    const fileExt = fileExtNameMap[pin.file.type.split(';')[0]];
+    const fileName = `${pin.pin_id}${config.appendDescToFileName ? '-' + sanitize(pin.raw_text) : ''}.${fileExt}`;
+    const targetFilePath = path.join(config.outputPath, board.title, fileName);
     queue.add(() => download(pin, targetFilePath)).then(() => {
       const msg = `Download success for ${fileName}, fileType=${pin.file.type}, queue-size=${queue.size}, pending-size=${queue.pending}, total=${total}`;
       console.log(msg);
